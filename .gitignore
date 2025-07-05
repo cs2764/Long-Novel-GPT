@@ -41,4 +41,9 @@ yarn-error.log*
 
 # OS
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Configuration files with sensitive data
+backend/runtime_config.json
+*.config.json
+**/config_local.json
