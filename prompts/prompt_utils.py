@@ -104,9 +104,19 @@ def load_yaml(file_path):
         return yaml.safe_load(file)  
 
 def load_text(file_path, read_size=None): 
+    # 规范化文件路径
+    file_path = os.path.normpath(file_path)
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
     # Read the raw bytes first
-    with open(file_path, 'rb') as file:
-        raw_data = file.read(read_size)
+    try:
+        with open(file_path, 'rb') as file:
+            raw_data = file.read(read_size)
+    except Exception as e:
+        raise IOError(f"Failed to read file {file_path}: {str(e)}")
     
     # Detect the encoding
     result = chardet.detect(raw_data[:10000])

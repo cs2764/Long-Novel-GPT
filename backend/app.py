@@ -23,6 +23,13 @@ from summary import process_novel
 from backend_utils import get_model_config_from_provider_model
 from config import MAX_NOVEL_SUMMARY_LENGTH, MAX_THREAD_NUM, ENABLE_ONLINE_DEMO
 
+# 导入动态配置API
+try:
+    from dynamic_config_api import dynamic_config_bp
+    app.register_blueprint(dynamic_config_bp)
+    print("✅ 动态配置API已注册")
+except ImportError as e:
+    print(f"⚠️ 动态配置API导入失败: {e}")
 
 app.register_blueprint(setting_bp)
 
@@ -40,29 +47,58 @@ def health_check():
 
 
 def load_novel_writer(writer_mode, chunk_list, global_context, x_chunk_length, y_chunk_length, main_model, sub_model, max_thread_num) -> DraftWriter:
-    kwargs = dict(
-        xy_pairs=chunk_list,
-        model=get_model_config_from_provider_model(main_model),
-        sub_model=get_model_config_from_provider_model(sub_model),
-    )
+    import traceback
+    
+    print(f"\n=== Loading Novel Writer ===")
+    print(f"Writer Mode: {writer_mode}")
+    print(f"Main Model: {main_model}")
+    print(f"Sub Model: {sub_model}")
+    
+    try:
+        print(f"🔧 Getting main model config...")
+        main_model_config = get_model_config_from_provider_model(main_model)
+        print(f"✅ Main model config obtained")
+        
+        print(f"🔧 Getting sub model config...")
+        sub_model_config = get_model_config_from_provider_model(sub_model)
+        print(f"✅ Sub model config obtained")
+        
+        kwargs = dict(
+            xy_pairs=chunk_list,
+            model=main_model_config,
+            sub_model=sub_model_config,
+        )
 
-    kwargs['x_chunk_length'] = x_chunk_length
-    kwargs['y_chunk_length'] = y_chunk_length
-    kwargs['max_thread_num'] = max_thread_num
-    match writer_mode:
-        case 'draft':
-            kwargs['global_context'] = {}
-            novel_writer = DraftWriter(**kwargs)
-        case 'outline':
-            kwargs['global_context'] = {'summary': global_context}
-            novel_writer = OutlineWriter(**kwargs)
-        case 'plot':
-            kwargs['global_context'] = {'chapter': global_context}
-            novel_writer = PlotWriter(**kwargs)
-        case _:
-            raise ValueError(f"unknown writer: {writer_mode}")
-            
-    return novel_writer
+        kwargs['x_chunk_length'] = x_chunk_length
+        kwargs['y_chunk_length'] = y_chunk_length
+        kwargs['max_thread_num'] = max_thread_num
+        
+        print(f"🔧 Creating writer for mode: {writer_mode}")
+        
+        match writer_mode:
+            case 'draft':
+                kwargs['global_context'] = {}
+                novel_writer = DraftWriter(**kwargs)
+            case 'outline':
+                kwargs['global_context'] = {'summary': global_context}
+                novel_writer = OutlineWriter(**kwargs)
+            case 'plot':
+                kwargs['global_context'] = {'chapter': global_context}
+                novel_writer = PlotWriter(**kwargs)
+            case _:
+                error_msg = f"unknown writer: {writer_mode}"
+                print(f"❌ {error_msg}")
+                raise ValueError(error_msg)
+                
+        print(f"✅ Novel writer created successfully")
+        return novel_writer
+        
+    except Exception as e:
+        print(f"❌ Error loading novel writer: {type(e).__name__}: {str(e)}")
+        traceback.print_exc()
+        raise
+    finally:
+        print(f"=== Novel Writer Loading Finished ===\n")
 
 
 
@@ -74,10 +110,13 @@ prompt_names = dict(
     draft = ['新建正文', '扩写正文', '润色正文'],
 )
 
+# 获取项目根目录
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 prompt_dirname = dict(
-    outline = 'prompts/创作章节',
-    plot = 'prompts/创作剧情',
-    draft = 'prompts/创作正文',
+    outline = os.path.join(project_root, 'prompts', '创作章节'),
+    plot = os.path.join(project_root, 'prompts', '创作剧情'),
+    draft = os.path.join(project_root, 'prompts', '创作正文'),
 )
 
 
@@ -85,10 +124,15 @@ PROMPTS = {}
 for type_name, dirname in prompt_dirname.items():
     PROMPTS[type_name] = {'prompt_names': prompt_names[type_name]}
     for name in prompt_names[type_name]:
-        content = clean_txt_content(load_prompt(dirname, name))
-        if content.startswith("user:\n"):
-            content = content[len("user:\n"):]
-        PROMPTS[type_name][name] = {'content': content}
+        try:
+            content = clean_txt_content(load_prompt(dirname, name))
+            if content.startswith("user:\n"):
+                content = content[len("user:\n"):]
+            PROMPTS[type_name][name] = {'content': content}
+        except Exception as e:
+            print(f"⚠️ 加载提示词文件失败: {dirname}/{name}.txt - {e}")
+            # 使用默认内容继续运行而不是崩溃
+            PROMPTS[type_name][name] = {'content': f"# {name}\n\n提示词文件加载失败: {e}"}
 
 
 @app.route('/prompts', methods=['GET'])
@@ -129,38 +173,59 @@ def get_delta_chunks(prev_chunks, curr_chunks):
 
 
 def call_write(writer_mode, chunk_list, global_context, chunk_span, prompt_content, x_chunk_length, y_chunk_length, main_model, sub_model, max_thread_num, only_prompt):
-    if ENABLE_ONLINE_DEMO:
-        if max_thread_num > MAX_THREAD_NUM:
-            raise Exception("在线Demo模型下，最大线程数不能超过" + str(MAX_THREAD_NUM) + "！")
+    import traceback
     
-    # 输入的chunk_list中每个chunk需要加上换行，除了最后一个chunk（因为是从页面中各个chunk传来的）
-    chunk_list = [[e.strip() + ('\n' if e.strip() and rowi != len(chunk_list)-1 else '') for e in row] for rowi, row in enumerate(chunk_list)]
-
-    prev_chunks = None
-    def delta_wrapper(chunk_list, done=False, msg=None):
-        # 返回的chunk_list中每个chunk需要去掉换行
-        chunk_list = [[e.strip() for e in row] for row in chunk_list]
-
-        nonlocal prev_chunks
-        if prev_chunks is None:
-            prev_chunks = chunk_list
-            return {
-                "done": done,
-                "chunk_type": "init",
-                "chunk_list": chunk_list,
-                "msg": msg
-            }
-        else:
-            chunk_type, new_chunks = get_delta_chunks(prev_chunks, chunk_list)
-            prev_chunks = chunk_list
-            return {
-                "done": done,
-                "chunk_type": chunk_type,
-                "chunk_list": new_chunks,
-                "msg": msg
-            }
+    print(f"\n=== Novel Writing Process Started ===")
+    print(f"Writer Mode: {writer_mode}")
+    print(f"Main Model: {main_model}")
+    print(f"Sub Model: {sub_model}")
+    print(f"Max Thread Num: {max_thread_num}")
+    print(f"Chunk List Length: {len(chunk_list) if chunk_list else 0}")
+    print(f"Global Context: {str(global_context)[:200]}...")
+    
+    try:
+        if ENABLE_ONLINE_DEMO:
+            if max_thread_num > MAX_THREAD_NUM:
+                error_msg = "在线Demo模型下，最大线程数不能超过" + str(MAX_THREAD_NUM) + "！"
+                print(f"❌ {error_msg}")
+                raise Exception(error_msg)
         
-    novel_writer = load_novel_writer(writer_mode, chunk_list, global_context, x_chunk_length, y_chunk_length, main_model, sub_model, max_thread_num)
+        # 输入的chunk_list中每个chunk需要加上换行，除了最后一个chunk（因为是从页面中各个chunk传来的）
+        chunk_list = [[e.strip() + ('\n' if e.strip() and rowi != len(chunk_list)-1 else '') for e in row] for rowi, row in enumerate(chunk_list)]
+        print(f"✅ Chunk list processed")
+
+        prev_chunks = None
+        def delta_wrapper(chunk_list, done=False, msg=None):
+            # 返回的chunk_list中每个chunk需要去掉换行
+            chunk_list = [[e.strip() for e in row] for row in chunk_list]
+
+            nonlocal prev_chunks
+            if prev_chunks is None:
+                prev_chunks = chunk_list
+                return {
+                    "done": done,
+                    "chunk_type": "init",
+                    "chunk_list": chunk_list,
+                    "msg": msg
+                }
+            else:
+                chunk_type, new_chunks = get_delta_chunks(prev_chunks, chunk_list)
+                prev_chunks = chunk_list
+                return {
+                    "done": done,
+                    "chunk_type": chunk_type,
+                    "chunk_list": new_chunks,
+                    "msg": msg
+                }
+            
+        print(f"🔧 Loading novel writer...")
+        novel_writer = load_novel_writer(writer_mode, chunk_list, global_context, x_chunk_length, y_chunk_length, main_model, sub_model, max_thread_num)
+        print(f"✅ Novel writer loaded successfully")
+        
+    except Exception as e:
+        print(f"❌ Error in call_write setup: {type(e).__name__}: {str(e)}")
+        traceback.print_exc()
+        raise
     
 
     # draft需要映射，所以进行初始划分

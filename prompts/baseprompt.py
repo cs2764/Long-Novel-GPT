@@ -24,9 +24,16 @@ def clean_txt_content(content):
 
 
 def load_prompt(dirname, name):
-    txt_path = os.path.join(dirname, f"{name}.txt")
+    # 确保路径使用正确的分隔符
+    txt_path = os.path.normpath(os.path.join(dirname, f"{name}.txt"))
+    
+    # 检查文件是否存在
+    if not os.path.exists(txt_path):
+        print(f"Warning: Prompt file not found: {txt_path}")
+        # 返回默认内容而不是崩溃
+        return f"# {name}\n\n默认提示词内容，请检查文件路径：{txt_path}"
+    
     text = load_text(txt_path)
-
     return text
 
 def parse_prompt(text, **kwargs):
