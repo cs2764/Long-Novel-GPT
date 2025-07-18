@@ -413,6 +413,35 @@ header h2 {
     box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
 }
 
+.show-prompt-btn, .save-btn {
+    padding: 12px 24px;
+    background: #7f8c8d;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(127, 140, 141, 0.2);
+}
+
+.show-prompt-btn:hover, .save-btn:hover {
+    background: #6c7b7d;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(127, 140, 141, 0.3);
+}
+
+.save-btn {
+    background: #f39c12;
+    box-shadow: 0 2px 5px rgba(243, 156, 18, 0.2);
+}
+
+.save-btn:hover {
+    background: #e67e22;
+    box-shadow: 0 4px 8px rgba(243, 156, 18, 0.3);
+}
+
 .column-header-wrapper {
     display: flex;
     align-items: center;
@@ -498,6 +527,9 @@ header h2 {
     position: absolute;
     left: calc(75%);
     transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .chapter-selection.hidden {
@@ -508,5 +540,65 @@ header h2 {
 .chapter-selection .select-wrapper select {
     min-width: 100px;
     padding: 8px 15px;
+}
+
+.next-chapter-btn {
+    padding: 8px 12px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.next-chapter-btn:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+.next-chapter-btn:disabled {
+    background: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.prompt-input-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.save-prompt-btn, .reset-prompt-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.save-prompt-btn {
+    background: #2ecc71;
+    color: white;
+}
+
+.save-prompt-btn:hover {
+    background: #27ae60;
+    transform: translateY(-1px);
+}
+
+.reset-prompt-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.reset-prompt-btn:hover {
+    background: #c0392b;
+    transform: translateY(-1px);
 }
  

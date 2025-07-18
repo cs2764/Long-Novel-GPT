@@ -477,7 +477,7 @@ class Writer:
         except Exception as e:
             # 如果y_chunk不能找到更多的区块划分，干脆让x_chunk划分更少的区块
             y_pairs = split_text_into_chunks(chunk.y_chunk, self.y_chunk_length, min_chunk_n=1, min_chunk_size=5, max_chunk_n=20)
-            x_pairs = split_text_into_chunks(chunk.x_chunk, self.x_chunk_length, min_chunk_n=1, min_chunk_size=5, max_chunk_n=int(0.8 * len(y_pairs)))
+            x_pairs = split_text_into_chunks(chunk.x_chunk, self.x_chunk_length, min_chunk_n=1, min_chunk_size=5, max_chunk_n=max(1, int(0.8 * len(y_pairs))))
             
             # TODO: 这是因为目前映射Prompt的设计需要x数量小于y，后续会对Prompt进行改进
 

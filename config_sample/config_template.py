@@ -105,7 +105,7 @@ TEMPERATURE_SETTINGS = {
 
 # 网络设置
 NETWORK_SETTINGS = {
-    "timeout": 60,                # 请求超时时间(秒)
+    "timeout": 300,               # 请求超时时间(秒)
     "max_retries": 3,             # 最大重试次数
     "retry_delay": 2.0            # 重试延迟时间(秒)
 }

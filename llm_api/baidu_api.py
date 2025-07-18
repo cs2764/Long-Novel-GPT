@@ -88,7 +88,12 @@ def stream_chat_with_wenxin(messages, model='ERNIE-Bot', response_json=False, ak
                 print(f"📦 Chunk #{chunk_count}: {str(part)[:200]}...")
             
             content += part['body']['result'] or ''
-            messages[-1]['content'] = content
+            
+            # 对内容进行思考过程过滤（处理 <think> </think> 等标签）
+            from prompts.prompt_utils import filter_thinking_process
+            filtered_content = filter_thinking_process(content)
+            
+            messages[-1]['content'] = filtered_content
             yield messages
         
         total_time = time.time() - start_time

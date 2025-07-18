@@ -1,4 +1,4 @@
-import { showToast } from './utils.js';
+import { showToast, createNewChunk } from './utils.js';
 
 let previousMode = null;
 let modelConfigs = null;
@@ -164,11 +164,24 @@ function createSettingsPopup() {
                     <label for="creativePrompt">创作提示词模板</label>
                     <textarea id="creativePrompt" rows="4" placeholder="输入创作相关的提示词模板...">${settings.CREATIVE_PROMPT || ''}</textarea>
                 </div>
+                <div class="setting-item experimental-feature">
+                    <label class="enhanced-prompt-toggle">
+                        <input type="checkbox" id="enhancedPromptMode" ${settings.ENHANCED_PROMPT_MODE ? 'checked' : ''}>
+                        <span class="checkmark"></span>
+                        增强提示词模式 (实验性功能)
+                    </label>
+                    <p class="setting-description">
+                        启用后将使用增强版提示词进行创作，提供更详细的引导和约束。
+                        <br>
+                        <em>注意：此功能为实验性功能，可能影响创作效果。</em>
+                    </p>
+                </div>
             </div>
         </div>
         <div class="settings-footer">
             <button class="export-config-btn">导出配置</button>
             <button class="import-config-btn">导入配置</button>
+            <button class="global-reset-btn">全局重置</button>
             <button class="save-settings">保存所有设置</button>
         </div>
     `;
@@ -224,6 +237,17 @@ function createSettingsPopup() {
         input.onchange = importConfiguration;
         input.click();
     });
+    
+    // Global reset button
+    const globalResetBtn = popup.querySelector('.global-reset-btn');
+    if (globalResetBtn) {
+        globalResetBtn.addEventListener('click', () => {
+            console.log('Global reset button clicked');
+            showGlobalResetDialog();
+        });
+    } else {
+        console.warn('Global reset button not found');
+    }
     
     // Reload models button
     popup.querySelector('.reload-models-btn').addEventListener('click', reloadAllModels);
@@ -699,11 +723,41 @@ function saveAllSettings() {
         MAX_THREAD_NUM: parseInt(document.getElementById('maxThreadNum').value),
         MAX_NOVEL_SUMMARY_LENGTH: parseInt(document.getElementById('maxNovelSummaryLength').value),
         SYSTEM_PROMPT: document.getElementById('systemPrompt').value,
-        CREATIVE_PROMPT: document.getElementById('creativePrompt').value
+        CREATIVE_PROMPT: document.getElementById('creativePrompt').value,
+        ENHANCED_PROMPT_MODE: document.getElementById('enhancedPromptMode').checked
     };
     
     localStorage.setItem('settings', JSON.stringify(settings));
     showToast('所有设置已保存', 'success');
+    
+    // If enhanced prompt mode is enabled, generate enhanced prompts
+    if (settings.ENHANCED_PROMPT_MODE) {
+        generateEnhancedPrompts();
+    }
+}
+
+// Generate enhanced prompts based on existing ones
+async function generateEnhancedPrompts() {
+    try {
+        showToast('正在生成增强提示词...', 'info');
+        
+        const response = await fetch(`${window._env_?.SERVER_URL}/generate_enhanced_prompts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('增强提示词生成成功', 'success');
+        } else {
+            showToast(`增强提示词生成失败: ${result.error}`, 'error');
+        }
+    } catch (error) {
+        showToast(`增强提示词生成失败: ${error.message}`, 'error');
+    }
 }
 
 export async function loadModelConfigs() {
@@ -892,5 +946,182 @@ function hideSettings() {
                 previousTab.click();
             }
         }
+    }
+}
+
+function showGlobalResetDialog() {
+    console.log('showGlobalResetDialog called');
+    const resetDialog = document.createElement('div');
+    resetDialog.className = 'settings-overlay';
+    resetDialog.style.zIndex = '10001';
+    resetDialog.style.display = 'block';
+    
+    const resetPopup = document.createElement('div');
+    resetPopup.className = 'settings-popup reset-dialog';
+    resetPopup.innerHTML = `
+        <div class="settings-header">
+            <div class="header-content">
+                <h3>⚠️ 全局重置确认</h3>
+                <p class="subtitle">此操作将删除所有创作内容和配置信息</p>
+            </div>
+            <button class="settings-close">&times;</button>
+        </div>
+        <div class="reset-warning">
+            <div class="warning-content">
+                <h4>将要重置的内容：</h4>
+                <ul class="reset-list">
+                    <li>✗ 所有章节内容</li>
+                    <li>✗ 所有剧情内容</li>
+                    <li>✗ 所有正文内容</li>
+                    <li>✗ 所有已保存的创作数据</li>
+                </ul>
+                
+                <div class="custom-prompt-option">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="resetCustomPrompts" />
+                        <span class="checkmark"></span>
+                        同时重置所有自定义提示词
+                    </label>
+                </div>
+                
+                <div class="confirmation-input">
+                    <label for="confirmText">请输入 "确认重置" 来确认此操作：</label>
+                    <input type="text" id="confirmText" placeholder="确认重置" />
+                </div>
+            </div>
+        </div>
+        <div class="settings-footer">
+            <button class="cancel-reset-btn">取消</button>
+            <button class="confirm-reset-btn" disabled>确认重置</button>
+        </div>
+    `;
+    
+    resetDialog.appendChild(resetPopup);
+    document.body.appendChild(resetDialog);
+    
+    // Add event listeners
+    const closeBtn = resetPopup.querySelector('.settings-close');
+    const cancelBtn = resetPopup.querySelector('.cancel-reset-btn');
+    const confirmBtn = resetPopup.querySelector('.confirm-reset-btn');
+    const confirmInput = resetPopup.querySelector('#confirmText');
+    
+    function closeDialog() {
+        document.body.removeChild(resetDialog);
+    }
+    
+    closeBtn.addEventListener('click', closeDialog);
+    cancelBtn.addEventListener('click', closeDialog);
+    
+    // Enable confirm button when correct text is entered
+    confirmInput.addEventListener('input', () => {
+        confirmBtn.disabled = confirmInput.value !== '确认重置';
+    });
+    
+    confirmBtn.addEventListener('click', () => {
+        const resetCustomPrompts = document.getElementById('resetCustomPrompts').checked;
+        performGlobalReset(resetCustomPrompts);
+        closeDialog();
+    });
+    
+    resetDialog.addEventListener('click', (e) => {
+        if (e.target === resetDialog) {
+            closeDialog();
+        }
+    });
+}
+
+function performGlobalReset(resetCustomPrompts) {
+    try {
+        // Clear all stored writing data
+        const keysToRemove = [];
+        
+        // Find all localStorage keys related to writing content
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (
+                key.startsWith('outline_') ||
+                key.startsWith('plot_') ||
+                key.startsWith('draft_') ||
+                key.startsWith('novel_') ||
+                key === 'current_novel_name' ||
+                key === 'novel_synopsis'
+            )) {
+                keysToRemove.push(key);
+            }
+        }
+        
+        // Clear custom prompts if requested
+        if (resetCustomPrompts) {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('custom_prompt_')) {
+                    keysToRemove.push(key);
+                }
+            }
+        }
+        
+        // Remove all identified keys
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        
+        // Reset to initial state
+        // Clear current content in the interface
+        if (document.querySelector('.synopsis-section textarea')) {
+            document.querySelector('.synopsis-section textarea').value = '';
+        }
+        
+        // Clear chunk containers
+        const chunkContainer = document.getElementById('chunkContainer');
+        if (chunkContainer) {
+            chunkContainer.innerHTML = '';
+            // Re-initialize with empty chunk
+            const initialChunk = createNewChunk('', '', '');
+            if (initialChunk) {
+                chunkContainer.appendChild(initialChunk);
+            }
+        }
+        
+        // Clear left panel input
+        const leftPanelInput = document.querySelector('.left-panel-input');
+        if (leftPanelInput) {
+            leftPanelInput.value = '';
+        }
+        
+        // Reset chapter select to default
+        const chapterSelect = document.getElementById('chapterSelect');
+        if (chapterSelect) {
+            chapterSelect.innerHTML = `
+                <option value="1">第1章</option>
+                <option value="2">第2章</option>
+                <option value="3">第3章</option>
+                <option value="4">第4章</option>
+                <option value="5">第5章</option>
+                <option value="6">第6章</option>
+                <option value="7">第7章</option>
+                <option value="8">第8章</option>
+                <option value="9">第9章</option>
+                <option value="10">第10章</option>
+            `;
+            chapterSelect.selectedIndex = 0;
+        }
+        
+        // Switch back to first mode
+        const firstTab = document.querySelector('.mode-tab[data-value="outline"]');
+        if (firstTab) {
+            firstTab.click();
+        }
+        
+        showToast(
+            resetCustomPrompts 
+                ? '全局重置完成，所有内容和自定义提示词已清空' 
+                : '全局重置完成，所有内容已清空，自定义提示词保留', 
+            'success'
+        );
+        
+        // Close settings
+        hideSettings();
+        
+    } catch (error) {
+        console.error('Global reset failed:', error);
+        showToast('重置失败：' + error.message, 'error');
     }
 }

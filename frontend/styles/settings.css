@@ -164,6 +164,141 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.global-reset-btn {
+    padding: 10px 20px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    margin-right: 10px;
+}
+
+.global-reset-btn:hover {
+    background-color: #d32f2f;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Reset dialog styles */
+.reset-dialog {
+    max-width: 500px;
+    width: 80%;
+}
+
+.reset-warning {
+    padding: 20px 0;
+}
+
+.warning-content h4 {
+    color: #f44336;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.reset-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+    background: #fff5f5;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #f44336;
+}
+
+.reset-list li {
+    padding: 5px 0;
+    color: #d32f2f;
+    font-weight: 500;
+}
+
+.custom-prompt-option {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.confirmation-input {
+    margin-top: 20px;
+}
+
+.confirmation-input label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.confirmation-input input {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.confirmation-input input:focus {
+    outline: none;
+    border-color: #f44336;
+}
+
+.cancel-reset-btn {
+    padding: 10px 20px;
+    background-color: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    margin-right: 10px;
+}
+
+.cancel-reset-btn:hover {
+    background-color: #5a6268;
+    transform: translateY(-1px);
+}
+
+.confirm-reset-btn {
+    padding: 10px 20px;
+    background-color: #f44336;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.confirm-reset-btn:hover:not(:disabled) {
+    background-color: #d32f2f;
+    transform: translateY(-1px);
+}
+
+.confirm-reset-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* Enhanced popup for larger interface */
 .settings-popup-large {
     width: 90%;
@@ -564,6 +699,42 @@
     }
 }
 
+/* Enhanced prompt mode styles */
+.experimental-feature {
+    background: #fff8e1;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 15px;
+}
+
+.enhanced-prompt-toggle {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #495057;
+    font-weight: 500;
+}
+
+.enhanced-prompt-toggle input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.setting-description {
+    margin-top: 10px;
+    font-size: 13px;
+    color: #6c757d;
+    line-height: 1.5;
+}
+
+.setting-description em {
+    color: #dc3545;
+    font-style: normal;
+    font-weight: 500;
+}
+
 /* Custom scrollbar styles */
 .settings-popup::-webkit-scrollbar {
     width: 8px;
@@ -581,4 +752,90 @@
 
 .settings-popup::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
+}
+
+/* Global reset dialog styles */
+.reset-dialog {
+    max-width: 500px;
+    width: 90%;
+}
+
+.reset-warning {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff5f5;
+    border: 1px solid #fed7d7;
+    border-radius: 8px;
+}
+
+.warning-content h4 {
+    margin: 0 0 15px 0;
+    color: #c53030;
+    font-size: 16px;
+}
+
+.reset-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+}
+
+.reset-list li {
+    padding: 5px 0;
+    color: #c53030;
+    font-weight: 500;
+}
+
+.custom-prompt-option {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #4a5568;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.1);
+}
+
+.confirmation-input {
+    margin-top: 20px;
+}
+
+.confirmation-input label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.confirmation-input input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.confirm-reset-btn:disabled {
+    background-color: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.confirm-reset-btn:not(:disabled) {
+    background-color: #e53e3e;
+    color: white;
+}
+
+.confirm-reset-btn:not(:disabled):hover {
+    background-color: #c53030;
 } 

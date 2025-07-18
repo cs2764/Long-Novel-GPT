@@ -16,6 +16,22 @@ todo.md
 states.json
 "states copy.json"
 
+# Temporary files
+tmp.yaml
+tmp.json
+*.tmp
+*.temp
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+
+# Claude AI configuration (contains sensitive info)
+.claude/
+.claude/**
 
 # Environment variables
 .env
@@ -28,6 +44,24 @@ __pycache__/
 *$py.class
 venv/
 .venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
 
 # Node
 node_modules/
@@ -36,8 +70,11 @@ yarn-debug.log*
 yarn-error.log*
 
 # IDE
+.vscode/
+.idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -45,5 +82,48 @@ Thumbs.db
 
 # Configuration files with sensitive data
 backend/runtime_config.json
+runtime_config.json
 *.config.json
 **/config_local.json
+config_local.py
+local_config.py
+
+# User data and logs
+logs/
+*.log
+*.out
+*.err
+
+# Docker
+.dockerignore
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# API Keys and sensitive configurations
+api_keys.json
+secrets.json
+credentials.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Cache directories
+.cache/
+cache/
+tmp/
+temp/

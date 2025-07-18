@@ -140,15 +140,29 @@ def run_yield_func(func, *args, **kwargs):
 def split_text_into_chunks(text, max_chunk_size, min_chunk_n, min_chunk_size=1, max_chunk_n=1000):
     def split_paragraph(para):
         mid = len(para) // 2
-        split_pattern = r'[。？；]'
+        # 扩展分割模式，包含更多标点符号和可能的分割点
+        split_pattern = r'[。？！；、，：""''（）【】\s]'
         split_points = [m.end() for m in re.finditer(split_pattern, para)]
         
         if not split_points:
-            raise Exception("没有找到分割点!")
+            # 如果没有找到任何标点符号，尝试在中点附近分割
+            if len(para) >= 2:
+                return para[:mid], para[mid:]
+            else:
+                raise Exception("文本太短，无法分割!")
         
         closest_point = min(split_points, key=lambda x: abs(x - mid))
-        if not para[:closest_point].strip() or not para[closest_point:].strip():
-            raise Exception("没有找到分割点!")
+        
+        # 确保分割后的两部分都不为空
+        left_part = para[:closest_point].strip()
+        right_part = para[closest_point:].strip()
+        
+        if not left_part or not right_part:
+            # 如果标点符号分割导致空白部分，使用中点分割
+            if len(para) >= 2:
+                return para[:mid], para[mid:]
+            else:
+                raise Exception("文本太短，无法分割!")
         
         return para[:closest_point], para[closest_point:]
 
@@ -175,10 +189,32 @@ def split_text_into_chunks(text, max_chunk_size, min_chunk_n, min_chunk_size=1, 
 
     while len(paragraphs) < min_chunk_n or max(len(p) for p in paragraphs) > max_chunk_size:
         assert (count:=count+1) < 1000, "分割进入死循环！"
+        
+        # 如果已经达到最大段落数，但仍有超长段落，选择放宽限制而不是失败
+        if len(paragraphs) >= max_chunk_n:
+            max_length = max(len(p) for p in paragraphs)
+            if max_length > max_chunk_size:
+                print(f"警告: 已达到最大段落数限制({max_chunk_n})，但仍有长度为{max_length}的段落超过限制({max_chunk_size})，将保持现状")
+                break
+        
         longest_para_i = max(range(len(paragraphs)), key=lambda i: len(paragraphs[i]))
-        part1, part2 = split_paragraph(paragraphs[longest_para_i])
-        if len(part1) < min_chunk_size or len(part2) < min_chunk_size or len(paragraphs) + 1 > max_chunk_n:
-            raise Exception("没有找到合适的分割点!")
+        
+        # 检查是否可以继续分割
+        if len(paragraphs) + 1 > max_chunk_n:
+            print(f"警告: 无法进一步分割，已达到最大段落数限制({max_chunk_n})")
+            break
+        
+        try:
+            part1, part2 = split_paragraph(paragraphs[longest_para_i])
+        except Exception as e:
+            print(f"警告: 文本分割失败: {str(e)}。保持原始段落")
+            break
+        
+        # 检查分割后的段落是否满足最小长度要求
+        if len(part1) < min_chunk_size or len(part2) < min_chunk_size:
+            print(f"警告: 分割后的段落过短(part1={len(part1)}, part2={len(part2)})，保持原始段落")
+            break
+        
         paragraphs[longest_para_i:longest_para_i+1] = [part1, part2]
     
     return paragraphs

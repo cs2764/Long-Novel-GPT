@@ -254,7 +254,23 @@ function initPromptHandlers() {
         const selectedPrompt = e.target.value;
         
         if (prompts && prompts[selectedMode] && prompts[selectedMode][selectedPrompt]) {
-            updateTextArea(prompts[selectedMode][selectedPrompt].content);
+            // Check if there's a custom prompt saved
+            const customPromptKey = `custom_prompt_${selectedMode}_${selectedPrompt}`;
+            const customPrompt = localStorage.getItem(customPromptKey);
+            
+            if (customPrompt) {
+                updateTextArea(customPrompt);
+            } else {
+                // Check if enhanced prompt mode is enabled
+                const settings = JSON.parse(localStorage.getItem('settings') || '{}');
+                const useEnhancedPrompts = settings.ENHANCED_PROMPT_MODE || false;
+                
+                if (useEnhancedPrompts && prompts.enhanced && prompts.enhanced[selectedMode] && prompts.enhanced[selectedMode][selectedPrompt]) {
+                    updateTextArea(prompts.enhanced[selectedMode][selectedPrompt].content);
+                } else {
+                    updateTextArea(prompts[selectedMode][selectedPrompt].content);
+                }
+            }
         }
     });
 }
@@ -281,7 +297,60 @@ function updatePromptOptions(mode) {
         });
         
         // Trigger change event to update textarea with first option
-        promptSelect.dispatchEvent(new Event('change'));
+        if (promptSelect.options.length > 0) {
+            promptSelect.dispatchEvent(new Event('change'));
+        }
+    }
+}
+
+// Add function to save current state
+function saveCurrentState() {
+    const mode = document.getElementById('writeMode').value;
+    let currentChapter = mode === 'outline' ? null : document.getElementById('chapterSelect').value;
+    
+    if (!['novel', 'settings'].includes(mode)) {
+        const currentChunks = Array.from(document.querySelectorAll('.chunk-container')).map(chunk => [
+            chunk.querySelector('.x-input').value,
+            chunk.querySelector('.y-input').value,
+            chunk.querySelector('.revision-item').classList.contains('visible') ? 
+                chunk.querySelector('.revision-input').value : null
+        ]);
+        
+        let currentContext = '';
+        if (mode !== 'draft') {
+            const leftPanelInput = document.querySelector('.left-panel-input');
+            if (leftPanelInput) {
+                currentContext = leftPanelInput.value;
+            }
+        }
+
+        // Save current state
+        saveDataToStorage(mode, currentChapter, currentChunks, currentContext);
+    }
+}
+
+// Add function to save current state for a specific chapter
+function saveCurrentStateForChapter(chapter) {
+    const mode = document.getElementById('writeMode').value;
+    
+    if (!['novel', 'settings'].includes(mode)) {
+        const currentChunks = Array.from(document.querySelectorAll('.chunk-container')).map(chunk => [
+            chunk.querySelector('.x-input').value,
+            chunk.querySelector('.y-input').value,
+            chunk.querySelector('.revision-item').classList.contains('visible') ? 
+                chunk.querySelector('.revision-input').value : null
+        ]);
+        
+        let currentContext = '';
+        if (mode !== 'draft') {
+            const leftPanelInput = document.querySelector('.left-panel-input');
+            if (leftPanelInput) {
+                currentContext = leftPanelInput.value;
+            }
+        }
+
+        // Save state for the specified chapter
+        saveDataToStorage(mode, chapter, currentChunks, currentContext);
     }
 }
 
@@ -463,8 +532,16 @@ function initChapterSelection() {
         const mode = document.getElementById('writeMode').value;
         chapterSelection.style.display = mode === 'outline' ? 'none' : 'block';
         
+        let previousChapter = chapterSelect.value;
+        
         chapterSelect.addEventListener('change', (e) => {
-            handleChapterChange(e.target.value);
+            const newChapter = e.target.value;
+            // Save data for the previous chapter before switching
+            if (previousChapter && previousChapter !== newChapter) {
+                saveCurrentStateForChapter(previousChapter);
+            }
+            previousChapter = newChapter;
+            handleChapterChange(newChapter);
         });
     }
 }
@@ -490,6 +567,122 @@ function updateChapterSelect(chunks) {
             chapterSelect.appendChild(option);
         }
     });
+    
+    // Update next chapter button state after updating options
+    const nextChapterBtn = document.querySelector('.next-chapter-btn');
+    if (nextChapterBtn) {
+        const currentIndex = chapterSelect.selectedIndex;
+        const isLastChapter = currentIndex >= chapterSelect.options.length - 1;
+        
+        nextChapterBtn.disabled = isLastChapter;
+        nextChapterBtn.textContent = isLastChapter ? '已是最后章节' : '下一章';
+    }
+}
+
+// Initialize save button
+function initSaveButton() {
+    const saveBtn = document.querySelector('.save-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', () => {
+            saveCurrentState();
+        });
+    }
+}
+
+// Initialize next chapter button
+function initNextChapterButton() {
+    const nextChapterBtn = document.querySelector('.next-chapter-btn');
+    const chapterSelect = document.getElementById('chapterSelect');
+    
+    if (nextChapterBtn && chapterSelect) {
+        // Update button state based on current selection
+        function updateNextButtonState() {
+            const currentIndex = chapterSelect.selectedIndex;
+            const isLastChapter = currentIndex >= chapterSelect.options.length - 1;
+            
+            nextChapterBtn.disabled = isLastChapter;
+            nextChapterBtn.textContent = isLastChapter ? '已是最后章节' : '下一章';
+        }
+        
+        // Initialize button state
+        updateNextButtonState();
+        
+        // Update button state when chapter selection changes
+        chapterSelect.addEventListener('change', updateNextButtonState);
+        
+        // Handle next chapter button click
+        nextChapterBtn.addEventListener('click', () => {
+            if (!nextChapterBtn.disabled) {
+                const currentIndex = chapterSelect.selectedIndex;
+                if (currentIndex < chapterSelect.options.length - 1) {
+                    // Save current state before switching
+                    const currentChapter = chapterSelect.value;
+                    saveCurrentStateForChapter(currentChapter);
+                    
+                    // Move to next chapter
+                    chapterSelect.selectedIndex = currentIndex + 1;
+                    chapterSelect.dispatchEvent(new Event('change'));
+                    
+                    updateNextButtonState();
+                }
+            }
+        });
+    }
+}
+
+// Initialize prompt save and reset buttons
+function initPromptButtons() {
+    const savePromptBtn = document.querySelector('.save-prompt-btn');
+    const resetPromptBtn = document.querySelector('.reset-prompt-btn');
+    const promptTextarea = document.querySelector('.prompt-input textarea');
+    
+    if (savePromptBtn) {
+        savePromptBtn.addEventListener('click', () => {
+            const mode = document.getElementById('writeMode').value;
+            const promptSelect = document.querySelector('.prompt-actions .select-wrapper select');
+            const selectedPrompt = promptSelect.value;
+            const currentPrompt = promptTextarea.value;
+            
+            if (mode && selectedPrompt) {
+                // Save custom prompt to localStorage
+                const customPromptKey = `custom_prompt_${mode}_${selectedPrompt}`;
+                localStorage.setItem(customPromptKey, currentPrompt);
+                showToast('提示词已保存', 'success');
+            } else {
+                showToast('无法保存提示词', 'error');
+            }
+        });
+    }
+    
+    if (resetPromptBtn) {
+        resetPromptBtn.addEventListener('click', () => {
+            const mode = document.getElementById('writeMode').value;
+            const promptSelect = document.querySelector('.prompt-actions .select-wrapper select');
+            const selectedPrompt = promptSelect.value;
+            
+            if (mode && selectedPrompt) {
+                // Remove custom prompt from localStorage
+                const customPromptKey = `custom_prompt_${mode}_${selectedPrompt}`;
+                localStorage.removeItem(customPromptKey);
+                
+                // Reset to default prompt (check for enhanced prompt mode)
+                const settings = JSON.parse(localStorage.getItem('settings') || '{}');
+                const useEnhancedPrompts = settings.ENHANCED_PROMPT_MODE || false;
+                
+                if (useEnhancedPrompts && prompts.enhanced && prompts.enhanced[mode] && prompts.enhanced[mode][selectedPrompt]) {
+                    updateTextArea(prompts.enhanced[mode][selectedPrompt].content);
+                    showToast('提示词已重置为增强版默认', 'success');
+                } else if (prompts && prompts[mode] && prompts[mode][selectedPrompt]) {
+                    updateTextArea(prompts[mode][selectedPrompt].content);
+                    showToast('提示词已重置为默认', 'success');
+                } else {
+                    showToast('无法重置提示词', 'error');
+                }
+            } else {
+                showToast('无法重置提示词', 'error');
+            }
+        });
+    }
 }
 
 // Initialize when DOM is loaded
@@ -502,5 +695,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initExamplesSection();
     initGuideSection();
     initChapterSelection();
+    initSaveButton();
+    initNextChapterButton();
+    initPromptButtons();
 }); 
 

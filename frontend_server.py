@@ -67,8 +67,8 @@ class APIProxyHandler(http.server.SimpleHTTPRequestHandler):
                 if key.lower() not in skip_headers:
                     req.add_header(key, value)
             
-            # 发送请求
-            with urllib.request.urlopen(req, timeout=60) as response:
+            # 发送请求 - 针对LM Studio本地模型延长到5分钟
+            with urllib.request.urlopen(req, timeout=300) as response:
                 # 设置响应状态码
                 self.send_response(response.getcode())
                 

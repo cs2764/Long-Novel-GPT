@@ -116,7 +116,7 @@ REM 启动前端服务
 echo [启动] 前端服务 (端口: %FRONTEND_PORT%)
 start "Long-Novel-GPT 前端" start_frontend_temp.bat
 
-REM 等待前端启动并自动打开浏览器
+REM 等待前端启动
 echo [等待] 前端启动中...
 timeout /t 8 /nobreak >nul
 
@@ -124,10 +124,8 @@ echo.
 echo [完成] 服务启动完成！
 echo [访问] 前端地址: http://localhost:%FRONTEND_PORT%
 echo [访问] 后端地址: http://localhost:%BACKEND_PORT%
+echo [信息] 前端服务将自动打开浏览器
 echo.
-
-REM 自动打开浏览器
-start http://localhost:%FRONTEND_PORT%
 
 REM 清理临时文件
 timeout /t 2 /nobreak >nul

@@ -98,7 +98,12 @@ def stream_chat_with_doubao(messages, model='doubao-lite-32k', endpoint_id=None,
             if chunk.choices:
                 delta_content = chunk.choices[0].delta.content or ''
                 content += delta_content
-                messages[-1]['content'] = content
+                
+                # 对内容进行思考过程过滤（处理 <think> </think> 等标签）
+                from prompts.prompt_utils import filter_thinking_process
+                filtered_content = filter_thinking_process(content)
+                
+                messages[-1]['content'] = filtered_content
                 yield messages
         
         total_time = time.time() - start_time

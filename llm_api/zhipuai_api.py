@@ -94,6 +94,12 @@ def stream_chat_with_zhipuai(messages, model='glm-4-flash', response_json=False,
                 print(f"📦 Chunk #{chunk_count}: {str(chunk)[:200]}...")
             
             messages[-1]['content'] += chunk.choices[0].delta.content or ''
+            
+            # 对内容进行思考过程过滤（处理 <think> </think> 等标签）
+            from prompts.prompt_utils import filter_thinking_process
+            filtered_content = filter_thinking_process(messages[-1]['content'])
+            messages[-1]['content'] = filtered_content
+            
             yield messages
         
         total_time = time.time() - start_time

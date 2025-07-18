@@ -11,9 +11,20 @@ def parser(response_msgs, text_chunks, topk):
         content = match_first_json_block(content)
         content_json = json.loads(content)
         if content_json and isinstance(topk_indexes := next(iter(content_json.values())), list):
-                topk_indexes = [int(e) - 1 for e in topk_indexes[:topk]]
-                if all(0 <= e < len(text_chunks) for e in topk_indexes):
-                    return topk_indexes[:topk]
+                # 过滤掉思考过程，只保留数字索引
+                numeric_indexes = []
+                for e in topk_indexes[:topk]:
+                    try:
+                        # 尝试转换为整数，如果失败则跳过
+                        idx = int(e) - 1
+                        if 0 <= idx < len(text_chunks):
+                            numeric_indexes.append(idx)
+                    except (ValueError, TypeError):
+                        # 跳过无法转换为整数的元素（如思考过程中的文本）
+                        continue
+                
+                if numeric_indexes:
+                    return numeric_indexes[:topk]
     except Exception as e:
         import traceback
         traceback.print_exc()

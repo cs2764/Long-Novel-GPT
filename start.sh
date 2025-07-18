@@ -6,7 +6,7 @@ BACKEND_PORT=${BACKEND_PORT:-7869}
 BACKEND_HOST=${BACKEND_HOST:-0.0.0.0}
 WORKERS=${WORKERS:-4}
 THREADS=${THREADS:-2}
-TIMEOUT=${TIMEOUT:-120}
+TIMEOUT=${TIMEOUT:-300}
 
 # 在Linux环境下添加host.docker.internal解析
 # if ! grep -q "host.docker.internal" /etc/hosts; then

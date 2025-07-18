@@ -19,18 +19,46 @@ def can_parse_json(response):
     except:
         return False
 
+def filter_thinking_process(text):
+    """过滤掉思考过程，支持多种格式的思考标签"""
+    if not text:
+        return text
+    
+    # 过滤 <think> </think> 标签
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # 过滤 <thinking> </thinking> 标签
+    text = re.sub(r'<thinking>.*?</thinking>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # 过滤 <thought> </thought> 标签
+    text = re.sub(r'<thought>.*?</thought>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # 过滤 <reasoning> </reasoning> 标签
+    text = re.sub(r'<reasoning>.*?</reasoning>', '', text, flags=re.DOTALL | re.IGNORECASE)
+    
+    # 清理多余的空白行
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    text = text.strip()
+    
+    return text
+
 def match_first_json_block(response):
-    if can_parse_json(response):
-        return response
+    # 首先过滤掉思考过程
+    filtered_response = filter_thinking_process(response)
+    
+    if can_parse_json(filtered_response):
+        return filtered_response
     
     pattern = r"(?<=[\r\n])```json(.*?)```(?=[\r\n])"
-    matches = re.findall(pattern, '\n' + response + '\n', re.DOTALL)
+    matches = re.findall(pattern, '\n' + filtered_response + '\n', re.DOTALL)
     if not matches:
         pattern = r"(?<=[\r\n])```(.*?)```(?=[\r\n])"
-        matches = re.findall(pattern, '\n' + response + '\n', re.DOTALL)
+        matches = re.findall(pattern, '\n' + filtered_response + '\n', re.DOTALL)
         
     if matches:
         json_block = matches[0]
+        # 对JSON块也进行思考过程过滤
+        json_block = filter_thinking_process(json_block)
         if can_parse_json(json_block):
             return json_block
         else:

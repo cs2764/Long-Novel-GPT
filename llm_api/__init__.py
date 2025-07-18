@@ -11,7 +11,19 @@ class ModelConfig(dict):
     def __init__(self, model: str, **options):
         super().__init__(**options)
         self['model'] = model
+        # Add system_prompt if not provided
+        if 'system_prompt' not in self:
+            self['system_prompt'] = ""
+        # Add timeout configuration based on provider
+        self._set_timeout_by_provider()
         self.validate()
+    
+    def _set_timeout_by_provider(self):
+        """根据提供商类型设置超时时间"""
+        if 'timeout' not in self:
+            # 统一设置所有提供商的超时时间为300秒
+            self['timeout'] = 300  # 所有提供商：5分钟
+            print(f"🕐 设置API模型超时时间为5分钟")
 
     def validate(self):
         def check_key(provider, keys):
@@ -34,7 +46,7 @@ class ModelConfig(dict):
         if 'max_tokens' not in self:
             raise ValueError('ModelConfig未传入key: max_tokens')
         else:
-            assert self['max_tokens'] <= 4_096, 'max_tokens最大为4096！'
+            assert self['max_tokens'] <= 8_192, 'max_tokens最大为8192！'
 
 
     def get_api_keys(self) -> Dict[str, str]:
@@ -56,10 +68,24 @@ def stream_chat(model_config: ModelConfig, messages: list, response_json=False) 
         model_config.validate()
         print(f"✅ Model config validated successfully")
 
+        # Inject system prompt if provided
+        if model_config.get('system_prompt') and model_config['system_prompt'].strip():
+            # Add system prompt as the first message if not already present
+            if not messages or messages[0].get('role') != 'system':
+                system_message = {'role': 'system', 'content': model_config['system_prompt']}
+                messages = [system_message] + list(messages)
+                print(f"✅ System prompt injected: {model_config['system_prompt'][:100]}...")
+            else:
+                # If first message is already a system message, prepend our system prompt
+                existing_system = messages[0]['content']
+                combined_system = f"{model_config['system_prompt']}\n\n{existing_system}"
+                messages[0]['content'] = combined_system
+                print(f"✅ System prompt prepended to existing system message")
+
         messages = ChatMessages(messages, model=model_config['model'])
         print(f"✅ Chat messages processed, token count: {messages.count_message_tokens()}")
 
-        assert model_config['max_tokens'] <= 4096, 'max_tokens最大为4096！'
+        assert model_config['max_tokens'] <= 8192, 'max_tokens最大为8192！'
 
         if messages.count_message_tokens() > model_config['max_tokens']:
             error_msg = f'请求的文本过长，超过最大tokens:{model_config["max_tokens"]}。'
@@ -110,6 +136,7 @@ def stream_chat(model_config: ModelConfig, messages: list, response_json=False) 
                 base_url=model_config.get('base_url'),
                 proxies=model_config.get('proxies'),
                 max_tokens=model_config['max_tokens'],
+                timeout=model_config.get('timeout', 300),
                 response_json=response_json
             )
         else:
@@ -142,11 +169,20 @@ def test_stream_chat(model_config: ModelConfig):
         print(f"Test message: {messages[0]}")
         
         response_count = 0
-        for response in stream_chat(model_config, messages, use_cache=False):
+        for response in stream_chat(model_config, messages):
             response_count += 1
             if response_count <= 3:  # Log first few responses for debugging
-                print(f"📦 Test response #{response_count}: {str(response.response)[:100]}...")
-            yield response.response
+                if hasattr(response, 'response'):
+                    print(f"📦 Test response #{response_count}: {str(response.response)[:100]}...")
+                else:
+                    print(f"📦 Test response #{response_count}: {str(response)[:100]}...")
+            
+            # Return the response content
+            if hasattr(response, 'response'):
+                yield response.response
+            elif isinstance(response, list) and len(response) > 0:
+                # Handle chat messages format
+                yield response[-1].get('content', '')
         
         print(f"✅ Model test completed successfully, received {response_count} responses")
         return response

@@ -34,7 +34,8 @@ def get_model_config_from_provider_model(provider_model):
         model_config_dict = {
             'model': model_name,
             'api_key': provider_config.api_key,
-            'max_tokens': 4096  # 默认值，可以根据需要调整
+            'max_tokens': 8192,  # 默认值，可以根据需要调整
+            'system_prompt': provider_config.system_prompt or ""  # 添加系统提示词
         }
         
         # 添加特定提供商的额外配置

@@ -12,7 +12,27 @@ def parser(response_msgs, plot_chunks, text_chunks):
     content = match_first_json_block(content)
     plot2text = json.loads(content)
 
-    plot2text = {int(k) - 1 : [e - 1 for e in v] for k, v in plot2text.items()}
+    # 过滤掉思考过程，只保留数字键值对
+    filtered_plot2text = {}
+    for k, v in plot2text.items():
+        try:
+            # 尝试转换键为整数
+            k_int = int(k) - 1
+            if isinstance(v, list):
+                # 过滤值列表，只保留数字
+                v_filtered = []
+                for e in v:
+                    try:
+                        v_filtered.append(int(e) - 1)
+                    except (ValueError, TypeError):
+                        # 跳过无法转换为整数的元素
+                        continue
+                filtered_plot2text[k_int] = v_filtered
+        except (ValueError, TypeError):
+            # 跳过无法转换为整数的键（如思考过程中的文本）
+            continue
+    
+    plot2text = filtered_plot2text
     # print(plot2text)
     plot_text_pair = []
 

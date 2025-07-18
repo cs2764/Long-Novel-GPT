@@ -6,6 +6,11 @@ from prompts.prompt_utils import load_text, match_code_block
 
 def parser(response_msgs):
     content = response_msgs.response
+    
+    # 过滤掉思考过程
+    from prompts.prompt_utils import filter_thinking_process
+    content = filter_thinking_process(content)
+    
     blocks = match_code_block(content)
     if blocks:
         concat_blocks = "\n".join(blocks)
